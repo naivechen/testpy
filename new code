@@ -1,1 +1,27 @@
+# 导入必要的库
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score
 
+# 样本数据：短信和标签
+messages = ['Good morning!', 'Hello, are we still meeting tomorrow?', 'Congratulations!', 'Can you call me back later?']
+labels = ['spam', 'ham', 'spam', 'ham']
+
+# 文本转换为词频矩阵
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(messages)
+
+# 数据集分为训练集和测试集
+X_train, X_test, y_train, y_test = train_test_split(X, labels, test_size=0.25, random_state=42)
+
+# 使用MultinomialNB朴素贝叶斯分类器
+model = MultinomialNB()
+model.fit(X_train, y_train)
+
+# 预测测试集
+y_pred = model.predict(X_test)
+
+# 输出分类准确率
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy:.2f}')
