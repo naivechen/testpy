@@ -1,0 +1,24 @@
+import xml.etree.ElementTree as ET
+
+# 1. 使用绝对路径解析 XML 文件
+tree = ET.parse('/Users/yufanli/Desktop/students.xml')
+root = tree.getroot()
+
+# 2. 遍历 XML 文件中的每个 class 元素
+for class_element in root.findall('class'):
+# 获取班级名称
+    class_name = class_element.get('name')
+    print(f"Class: {class_name}")
+    
+# 3. 遍历当前班级中的每个 student 元素
+    for student in class_element.findall('student'):
+        student_id = student.get('id')
+        name = student.find('name').text
+        age = student.find('age').text
+        grade = student.find('grade').text
+
+# 4. 输出学生信息
+        print(f"  Student ID: {student_id}")
+        print(f"    Name: {name}")
+        print(f"    Age: {age}")
+        print(f"    Grade: {grade}")
