@@ -2,7 +2,6 @@ import pandas as pd
 import json
 import re
 
-
 translation_map = {
     "TAPSE": "TAPSE",
     "主动脉窦部内径": "Aortic Sinus Diameter",
@@ -31,77 +30,59 @@ translation_map = {
     "TDI三尖瓣环s'": "TDI Tricuspid Annular s' Velocity",
     "平均e'": "Average e' Velocity"
 }
-excel_file = 'work.xlsx'
-df = pd.read_excel(excel_file)
-rightmost_column = df.iloc[:, -1].dropna()
-data_list = rightmost_column.tolist()
 
-translated_data_list = []
-for data in data_list:
-    translated_data = {}
-    for item in data.split(','):
-        if ':' not in item:
-            continue
-
-        key, value = item.split(':', 1)
-
-        key = key.replace('′', "'").replace('‘', "'").replace('’', "'").strip()
-
-        english_key = translation_map.get(key, key)
-
-        match = re.search(r'\d+\.?\d*', value)
-        if match:
-            num_str = match.group()
-            value = float(num_str) if '.' in num_str else int(num_str)
-        else:
-            value = None
-
-        translated_data[english_key] = value
-
-    translated_data_list.append(translated_data)
-
-json_file = 'Results.json'
-with open(json_file, 'w', encoding='utf-8') as f:
-    json.dump(translated_data_list, f, ensure_ascii=False, indent=4)
-
-
-
-md_content = {
-    "TAPSE": "三尖瓣环运动幅度",
-    "Aortic Sinus Diameter": "主动脉窦部内径",
-    "Left Atrial Diameter": "左房内径",
-    "Interventricular Septum Thickness": "室间隔厚度",
-    "Left Ventricular End-Diastolic Diameter": "左室舒张末期内径",
-    "Left Ventricular Posterior Wall Thickness": "左室后壁厚度",
-    "Left Ventricular End-Systolic Diameter": "左室收缩末期内径",
-    "Ejection Fraction": "射血分数",
-    "Right Atrial Diameter (Horizontal)": "右房内径（横径）",
-    "Right Ventricular Diameter (Horizontal)": "右室内径（横径）",
-    "Mitral E-wave Velocity": "二尖瓣E峰,",
-    "Mitral A-wave Velocity": "二尖瓣A峰",
-    "E/A Ratio": "二尖瓣E峰与A峰速度比值",
-    "E-wave Deceleration Time": "舒张时间指二尖瓣舒张的时间长度",
-    "Septal e' Velocity": "心脏间隔部位的早期舒张速度",
-    "Lateral e' Velocity": "心脏侧壁部位的早期舒张速度",
-    "E/e' Ratio": "二尖瓣E峰与间隔e'的比值",
-    "Pulmonary Arterial Systolic Pressure": "肺动脉压收缩压",
-    "Aortic Valve Annulus Diameter": "主动脉瓣环内径",
-    "Sinotubular Junction Diameter": "窦管内径",
-    "Maximum Distal Diameter": "远端最宽径",
-    "RV Area Change Fraction": "RV面积改变分数",
-    "TDI Tricuspid Annular s' Velocity": "三尖瓣环的运动速度",
-    "Average e' Velocity": "心脏各部位e'速度的平均值",
-    "Left Atrial Diameter": "左房内径",
-    "Sinus Diameter": "窦部内径",
-
+patient_info_translation = {
+    "患者姓名": "Patient Name",
+    "患者类型": "Patient Category",
+    "患者ID": "Patient ID",
+    "检查时间": "Examination Time",
 }
-max_eng_len = max(len(eng) for eng in md_content.keys())
-max_chi_len = max(len(chi) for chi in md_content.values())
-md_file = 'parameters_description.md'
 
-with open(md_file, 'w', encoding='utf-8') as f:
-    f.write(f"| {'ENGLISH'.ljust(max_eng_len)} | {'CHINISE'.ljust(max_chi_len)} |\n")
-    f.write(f"|{'-' * (max_eng_len + 2)}|{'-' * (max_chi_len + 2)}|\n")
- 
-    for eng, chi in md_content.items():
-        f.write(f"| {eng.ljust(max_eng_len)} | {chi.ljust(max_chi_len)} |\n")
+
+def extract_and_translate(excel_file, output_json):
+    df = pd.read_excel(excel_file, dtype={"患者ID": str})
+    category_translation = {
+        "住院": "Inpatient",
+        "门诊": "Outpatient"
+    }
+    df["患者类型"] = df["患者类型"].replace(category_translation)
+
+    required_columns = list(patient_info_translation.keys())
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"缺少必要的列：{col}")
+
+    rightmost_column = df.iloc[:, -1].dropna()
+    data_list = rightmost_column.tolist()
+
+    translated_data_list = []
+
+    for i, data in enumerate(data_list):
+        translated_data = {}
+        for item in data.split(','):
+            if ':' not in item:
+                continue
+            key, value = item.split(':', 1)
+            key = key.replace('′', "'").replace('‘', "'").replace('’', "'").strip()
+            english_key = translation_map.get(key, key)
+
+            match = re.search(r'\d+\.?\d*', value)
+            if match:
+                num_str = match.group()
+                value = float(num_str) if '.' in num_str else int(num_str)
+            else:
+                value = None
+
+            translated_data[english_key] = value
+
+        for cn_key, en_key in patient_info_translation.items():
+            translated_data[en_key] = str(df.iloc[i][cn_key])  
+
+        translated_data_list.append(translated_data)
+
+    with open(output_json, 'w', encoding='utf-8') as f:
+        json.dump(translated_data_list, f, ensure_ascii=False, indent=4)
+
+
+if __name__ == "__main__":
+    extract_and_translate("work.xlsx", "Results.json")
